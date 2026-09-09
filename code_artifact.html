@@ -1,0 +1,769 @@
+<!-- ... existing code ... -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>단어 잡기 두더지 게임</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Jua&family=Nunito:wght@700;900&display=swap');
+        
+        body {
+            font-family: 'Jua', sans-serif;
+            /* 2. 전체적 배경 뭔가 더 동산 느낌으로 (하늘과 풀밭 그라데이션) */
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 40%, #81C784 40%, #4CAF50 100%);
+            touch-action: manipulation;
+            margin: 0;
+            /* 1, 2. 스크롤 없애고 화면 꽉 채우기 */
+            height: 100vh;
+            overflow: hidden; 
+        }
+        .en-font { font-family: 'Nunito', sans-serif; font-weight: 900; }
+        
+        /* 구름 장식 (옵션) */
+        .clouds {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 200px;
+            background: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.8) 40px, transparent 41px),
+                        radial-gradient(circle at 25% 40%, rgba(255,255,255,0.8) 60px, transparent 61px),
+                        radial-gradient(circle at 32% 35%, rgba(255,255,255,0.8) 50px, transparent 51px),
+                        radial-gradient(circle at 75% 20%, rgba(255,255,255,0.6) 30px, transparent 31px),
+                        radial-gradient(circle at 80% 30%, rgba(255,255,255,0.6) 50px, transparent 51px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 두더지와 구멍 스타일 */
+        .hole-container {
+            position: relative;
+            background-color: #5d4037;
+            border-radius: 50%;
+            overflow: hidden;
+            border-bottom: 8px solid #3e2723;
+            box-shadow: inset 0 15px 20px rgba(0,0,0,0.5);
+            /* 보드 크기 비율 맞추기 위함 */
+            width: 100%;
+            height: 100%;
+        }
+        
+        .grass {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 25%;
+            background-color: #388e3c;
+            border-top: 5px solid #2e7d32;
+            border-radius: 0 0 50px 50px;
+            z-index: 10;
+        }
+
+        .mole {
+            position: absolute;
+            bottom: -100%;
+            left: 10%;
+            width: 80%;
+            height: 95%;
+            background-color: #8d6e63;
+            border-radius: 50px 50px 0 0;
+            transition: bottom 0.12s ease-out; /* 조금 더 찰지게 속도 조절 */
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 5%; /* 여백 줄임 */
+            z-index: 5;
+            /* 3. 흰색 불투명 배경/테두리 제거됨 */
+        }
+
+        .mole.up {
+            bottom: 15%; /* 잔디 위로 올라옴 */
+        }
+
+        /* 1. 글씨 크기 조절 및 줄바꿈 허용으로 긴 단어 대응 */
+        .mole-text {
+            color: #ffffff; /* 하얀색 텍스트 */
+            text-shadow: 
+                -2px -2px 0 #000,  
+                 2px -2px 0 #000,
+                -2px  2px 0 #000,
+                 2px  2px 0 #000,
+                 0px  4px 4px rgba(0,0,0,0.6); 
+            font-size: 1.2rem; /* 글자 크기 축소 */
+            text-align: center;
+            /* 긴 단어 줄바꿈 허용 및 컨테이너 안에 맞추기 */
+            white-space: normal; 
+            word-break: break-word; /* 긴 단어 강제 줄바꿈 */
+            width: 100%;
+            max-width: 90%;
+            margin-top: 2px;
+            line-height: 1.1;
+            padding: 0 2px; /* 양옆 여백 최소화 */
+        }
+
+        /* 미디어 쿼리: 모바일 등 작은 화면에서 글자 크기 더 축소 */
+        @media (max-width: 768px) {
+            .mole-text { font-size: 1rem; }
+            .mole { padding-top: 2%; }
+        }
+
+        /* 클릭 시 피드백 애니메이션 */
+        .hit-correct { background-color: #66bb6a !important; }
+        .hit-wrong { background-color: #e57373 !important; }
+
+        /* 커스텀 스크롤바 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 4px; }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col p-2 relative">
+    <div class="clouds"></div>
+
+    <!-- 상단 헤더 -->
+    <header class="w-full max-w-7xl mx-auto flex justify-between items-center mb-2 px-2 z-10 relative">
+        <h1 class="text-3xl text-white font-bold text-shadow-md drop-shadow-md flex items-center gap-2">
+            <span>🐹</span> 학용품 잡기
+        </h1>
+        <button onclick="openTeacherAuthModal()" class="text-sm bg-white/80 hover:bg-white text-gray-700 px-4 py-2 rounded-full shadow-sm border border-gray-200 transition-colors font-bold">
+            👨‍🏫 선생님
+        </button>
+    </header>
+
+    <!-- 1. 가로형 화면 구성 (flex-row 중심) -->
+    <div class="max-w-7xl w-full mx-auto flex-1 flex flex-row gap-4 z-10 relative min-h-0 pb-2">
+        
+        <!-- 왼쪽 패널 (상태, 방법) -->
+        <div class="w-72 flex flex-col gap-3 h-full">
+            <!-- 2. 상태창 (문제가 빠진 자리를 채움) -->
+            <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-4 grid grid-cols-2 gap-3 text-center shrink-0">
+                <div class="bg-blue-50 rounded-xl p-3 shadow-inner">
+                    <div class="text-blue-800 text-sm font-bold mb-1">점수</div>
+                    <div class="text-4xl text-blue-600 font-black" id="scoreDisplay">0</div>
+                </div>
+                <div class="bg-red-50 rounded-xl p-3 shadow-inner">
+                    <div class="text-red-800 text-sm font-bold mb-1">시간</div>
+                    <div class="text-4xl text-red-500 font-black" id="timeDisplay">60</div>
+                </div>
+                <div class="bg-orange-50 rounded-xl p-3 col-span-2 flex justify-between items-center px-6 shadow-inner mt-1">
+                    <span class="text-orange-800 text-base font-bold">콤보</span>
+                    <span class="text-3xl text-orange-500 font-black" id="comboDisplay">0연속</span>
+                </div>
+            </div>
+
+            <!-- 게임 방법 -->
+            <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-4 flex-1 flex flex-col min-h-0">
+                <button id="startBtn" onclick="startGame()" class="w-full mt-2 bg-blue-500 hover:bg-blue-600 text-white text-2xl py-4 rounded-xl shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed border-2 border-blue-400 font-bold">
+                    게임 시작
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. 중앙 메인 게임 영역 (문제 제시 영역 추가) -->
+        <div class="flex-1 flex flex-col gap-2 h-full">
+            
+            <!-- 문제 제시 영역을 메인 게임 보드 바로 위로 이동 -->
+            <div class="bg-amber-100/90 backdrop-blur-sm rounded-2xl border-4 border-amber-300 p-3 text-center shadow-md shrink-0 w-full max-w-[80vh] mx-auto">
+                <p class="text-amber-800 text-sm mb-1 font-bold">이 단어를 잡으세요!</p>
+                <h1 class="text-5xl text-amber-900 drop-shadow-sm font-black" id="questionDisplay">준비</h1>
+            </div>
+
+            <!-- 3x3 게임 보드 -->
+            <div class="flex-1 bg-green-800/20 backdrop-blur-sm rounded-3xl border-4 border-green-700/30 p-3 md:p-6 flex items-center justify-center shadow-inner min-h-0">
+                <!-- 화면에 꽉 차게 비율(aspect-square) 유지 -->
+                <div class="grid grid-cols-3 gap-2 md:gap-4 aspect-square w-full h-full max-h-full max-w-[80vh] mx-auto" id="gameBoard">
+                    <!-- JavaScript로 구멍 생성 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 오른쪽 패널 (리더보드) -->
+        <div class="w-64 flex flex-col h-full">
+            <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-4 flex flex-col h-full">
+                <div class="flex justify-between items-center mb-3 border-b-2 border-gray-100 pb-2 shrink-0">
+                    <h2 class="text-lg text-gray-800 font-bold flex items-center gap-1">
+                        <span>🏆</span> 랭킹
+                    </h2>
+                    <span class="text-xs bg-red-100 text-red-600 font-bold px-2 py-0.5 rounded-full animate-pulse">LIVE</span>
+                </div>
+                <!-- 2. 스크롤 영역 최적화 -->
+                <div class="overflow-y-auto flex-1 pr-1 space-y-1" id="leaderboardList">
+                    <div class="text-center text-gray-400 py-10 text-sm">데이터를<br>불러오는 중...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- 오버레이 및 모달 화면 모음 -->
+    <!-- ============================================== -->
+
+    <!-- 1. 학생 정보 입력 (홈 화면) -->
+    <div id="loginOverlay" class="fixed inset-0 bg-green-50/90 backdrop-blur-md flex items-center justify-center z-[60] p-4">
+        <div class="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl border-4 border-green-300">
+            <div class="text-6xl mb-2 animate-bounce">🐹</div>
+            <h2 class="text-3xl text-gray-800 mb-1 font-bold">단어 잡기 두더지</h2>
+            <p class="text-gray-500 mb-6 text-sm">정보를 입력하고 시작하세요!</p>
+            
+            <div class="grid grid-cols-2 gap-3 mb-6 text-left">
+                <div>
+                    <label class="block text-gray-700 text-sm mb-1 font-bold">학년</label>
+                    <input type="number" id="inputGrade" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 focus:border-green-400 outline-none" placeholder="예: 3">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm mb-1 font-bold">반</label>
+                    <input type="number" id="inputClass" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 focus:border-green-400 outline-none" placeholder="예: 1">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm mb-1 font-bold">번호</label>
+                    <input type="number" id="inputNum" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 focus:border-green-400 outline-none" placeholder="예: 15">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm mb-1 font-bold">이름</label>
+                    <input type="text" id="inputName" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 focus:border-green-400 outline-none" placeholder="홍길동">
+                </div>
+            </div>
+            
+            <button onclick="joinGame()" class="w-full bg-green-500 hover:bg-green-600 text-white text-2xl py-3 rounded-xl shadow-lg transition-transform active:scale-95 font-bold border-2 border-green-600">
+                입장하기
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. 게임 종료 모달 -->
+    <div id="gameOverModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[50] p-4">
+        <!-- ... existing code ... -->
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+            <h2 class="text-4xl text-amber-500 mb-2 font-bold">게임 종료!</h2>
+            <p class="text-gray-600 mb-6 text-lg">점수가 랭킹에 기록되었습니다 👏</p>
+            
+            <div class="bg-gray-50 rounded-2xl p-4 mb-6 border-2 border-gray-100">
+                <div class="text-gray-500 mb-1 font-bold">최종 점수</div>
+                <div class="text-5xl text-blue-600 mb-4 font-black" id="finalScoreDisplay">0</div>
+                
+                <div class="text-gray-500 mb-1 font-bold">최대 콤보</div>
+                <div class="text-2xl text-orange-500 font-bold" id="finalComboDisplay">0연속</div>
+            </div>
+            
+            <button onclick="closeModalAndReset()" class="w-full bg-green-500 hover:bg-green-600 text-white text-2xl py-4 rounded-xl shadow-md transition-transform active:scale-95 font-bold">
+                다시 도전하기
+            </button>
+        </div>
+    </div>
+
+    <!-- 4. 교사용 비밀번호 입력 팝업 (브라우저 prompt 대체) -->
+    <div id="teacherAuthModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[60] p-4">
+        <div class="bg-white rounded-2xl p-6 w-80 text-center shadow-xl">
+            <h3 class="text-xl font-bold mb-4">👨‍🏫 선생님 인증</h3>
+            <input type="password" id="teacherPwInput" class="w-full border-2 border-gray-300 rounded-lg px-3 py-2 mb-4 text-center text-lg tracking-widest" placeholder="비밀번호">
+            <div class="flex gap-2">
+                <button onclick="closeTeacherAuthModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-bold">취소</button>
+                <button onclick="checkTeacherPw()" class="flex-1 bg-blue-500 text-white py-2 rounded-lg font-bold">확인</button>
+            </div>
+            <p id="pwErrorMsg" class="text-red-500 text-sm mt-2 hidden">비밀번호가 틀렸습니다.</p>
+        </div>
+    </div>
+
+    <!-- 3. 교사용 LMS 모달 -->
+    <div id="teacherModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[70] p-4">
+        <!-- ... existing code ... -->
+        <div class="bg-white rounded-3xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative">
+            <button onclick="closeTeacherModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-3xl font-bold">&times;</button>
+            <h2 class="text-3xl text-gray-800 mb-6 flex items-center gap-2 font-bold">
+                <span>👨‍🏫</span> 선생님 도구
+            </h2>
+            
+            <div class="flex flex-col md:flex-row gap-6">
+                <!-- 단어장 관리 섹션 -->
+                <div class="flex-1 bg-amber-50 p-4 rounded-2xl border-2 border-amber-200 flex flex-col h-[50vh]">
+                    <h3 class="text-xl text-amber-800 mb-2 font-bold">1. 단어장 실시간 편집</h3>
+                    <p class="text-xs text-gray-600 mb-3">저장 시 학생 화면에 즉시 반영됩니다.</p>
+                    
+                    <div id="teacherWordList" class="space-y-2 flex-1 overflow-y-auto pr-2 mb-3 bg-white p-2 rounded-xl border border-amber-100">
+                        <!-- JS로 렌더링 -->
+                    </div>
+                    
+                    <div class="flex gap-2 shrink-0">
+                        <button onclick="addWordRow()" class="flex-1 bg-white border-2 border-amber-400 text-amber-700 py-2 rounded-xl hover:bg-amber-100 font-bold">
+                            + 추가
+                        </button>
+                        <button onclick="saveWords()" class="flex-[2] bg-amber-500 text-white py-2 rounded-xl hover:bg-amber-600 font-bold shadow-md">
+                            💾 구름에 저장하기
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 리더보드 관리 섹션 -->
+                <div class="w-full md:w-64 flex flex-col gap-4">
+                    <div class="bg-red-50 p-4 rounded-2xl border-2 border-red-200">
+                        <h3 class="text-lg text-red-800 mb-2 font-bold">2. 리더보드 관리</h3>
+                        <p class="text-xs text-gray-600 mb-4">현재 누적된 반 랭킹 기록을 지웁니다.</p>
+                        <button onclick="openResetConfirm()" class="w-full bg-red-500 text-white py-3 rounded-xl hover:bg-red-600 font-bold shadow-md">
+                            ⚠️ 전체 초기화
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 교사용: 리더보드 리셋 확인 커스텀 모달 -->
+    <div id="resetConfirmModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[80] p-4">
+        <div class="bg-white rounded-2xl p-6 w-80 text-center shadow-xl border-4 border-red-500">
+            <h3 class="text-xl font-bold mb-2 text-red-600">정말 삭제하시겠습니까?</h3>
+            <p class="text-sm text-gray-600 mb-6">모든 학생의 랭킹 기록이 영구적으로 지워집니다.</p>
+            <div class="flex gap-2">
+                <button onclick="closeResetConfirm()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-bold">취소</button>
+                <button onclick="executeResetLeaderboard()" class="flex-1 bg-red-500 text-white py-2 rounded-lg font-bold">삭제 실행</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ============================================== -->
+    <!-- 게임 로직 및 Firebase 연동 -->
+    <!-- ============================================== -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase 설정 (기존과 동일)
+        let firebaseConfig = {};
+        try { if (typeof __firebase_config !== 'undefined') firebaseConfig = JSON.parse(__firebase_config); } catch(e) {}
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let unsubscribeWords = null;
+        let unsubscribeLeaderboard = null;
+
+        let globalWordList = [
+            { ko: "연필", en: "pencil" },
+            { ko: "필통", en: "pencil case" },
+            { ko: "딱풀", en: "glue stick" },
+            { ko: "책", en: "book" },
+            { ko: "가위", en: "scissors" },
+            { ko: "테이프", en: "tape" }
+        ];
+
+        /* -------------------------------------------
+           상태 변수 및 DOM 요소 (기존과 동일)
+           ------------------------------------------- */
+        const GAME_DURATION = 60;
+        const GRID_SIZE = 9;
+        
+        let score = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let timeLeft = GAME_DURATION;
+        let gameInterval;
+        let moleTimer; 
+        let isPlaying = false;
+        
+        let currentTargetWord = null;
+        let activeMoles = new Array(GRID_SIZE).fill(null);
+        let studentInfoString = "";
+
+        const scoreEl = document.getElementById('scoreDisplay');
+        const comboEl = document.getElementById('comboDisplay');
+        const timeEl = document.getElementById('timeDisplay');
+        const questionEl = document.getElementById('questionDisplay');
+        const boardEl = document.getElementById('gameBoard');
+        const startBtn = document.getElementById('startBtn');
+        
+        const synth = window.speechSynthesis;
+
+        // Firebase 인증 (기존과 동일)
+        const initAuth = async () => {
+            try {
+                if (initialAuthToken) await signInWithCustomToken(auth, initialAuthToken);
+                else await signInAnonymously(auth);
+            } catch (err) { console.error(err); }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            if(user) { currentUser = user; setupRealtimeListeners(); }
+        });
+
+        function setupRealtimeListeners() {
+            if(!currentUser) return;
+            const wordsRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'wordConfig');
+            unsubscribeWords = onSnapshot(wordsRef, (docSnap) => {
+                if(docSnap.exists()) globalWordList = docSnap.data().list;
+                else setDoc(wordsRef, { list: globalWordList }).catch(e=>{});
+                renderTeacherWords();
+            });
+
+            const lbRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
+            unsubscribeLeaderboard = onSnapshot(lbRef, (snapshot) => {
+                const lbData = [];
+                snapshot.forEach(doc => { lbData.push({ id: doc.id, ...doc.data() }); });
+                lbData.sort((a, b) => b.score - a.score || a.timestamp - b.timestamp);
+                renderLeaderboard(lbData);
+            });
+        }
+
+        /* -------------------------------------------
+           UI 렌더링 (리더보드 디자인 압축)
+           ------------------------------------------- */
+        function renderLeaderboard(data) {
+            const listEl = document.getElementById('leaderboardList');
+            listEl.innerHTML = '';
+            
+            if(data.length === 0) {
+                listEl.innerHTML = `<div class="text-center text-gray-400 py-6 text-sm">아직 기록이 없어요.<br>도전해보세요!</div>`;
+                return;
+            }
+
+            data.slice(0, 50).forEach((item, index) => {
+                const isTop3 = index < 3;
+                let rankIcon = `${index + 1}`;
+                if(index === 0) rankIcon = '🥇';
+                else if(index === 1) rankIcon = '🥈';
+                else if(index === 2) rankIcon = '🥉';
+
+                const div = document.createElement('div');
+                // 리더보드 항목 높이를 줄여 한 화면에 더 많이 보이게
+                div.className = `flex justify-between items-center py-2 px-2 border-b border-gray-50 ${isTop3 ? 'bg-amber-50/80 rounded-lg border-none mb-1' : ''}`;
+                div.innerHTML = `
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <span class="${isTop3 ? 'text-xl' : 'text-gray-400 w-5 text-center text-sm font-bold'}">${rankIcon}</span>
+                        <span class="text-gray-700 text-sm font-bold truncate">${item.name}</span>
+                    </div>
+                    <div class="text-blue-600 font-black shrink-0 ml-2 ${isTop3 ? 'text-base' : 'text-sm'}">${item.score}</div>
+                `;
+                listEl.appendChild(div);
+            });
+        }
+
+        window.renderTeacherWords = function() {
+            const container = document.getElementById('teacherWordList');
+            container.innerHTML = '';
+            globalWordList.forEach((word) => addWordRowToDOM(word.ko, word.en));
+        };
+
+        function addWordRowToDOM(ko = "", en = "") {
+            const container = document.getElementById('teacherWordList');
+            const row = document.createElement('div');
+            row.className = 'flex gap-1 word-row bg-gray-50 p-1 rounded';
+            row.innerHTML = `
+                <input type="text" class="flex-1 border border-gray-200 rounded px-2 py-1 text-sm ko-input" value="${ko}" placeholder="한글">
+                <input type="text" class="flex-1 border border-gray-200 rounded px-2 py-1 text-sm en-font en-input" value="${en}" placeholder="영어">
+                <button onclick="this.parentElement.remove()" class="bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200 text-sm">삭제</button>
+            `;
+            container.appendChild(row);
+        }
+        window.addWordRow = () => addWordRowToDOM();
+
+        /* -------------------------------------------
+           4. 커스텀 인증 모달 로직 (alert/prompt 대체)
+           ------------------------------------------- */
+        window.openTeacherAuthModal = () => {
+            document.getElementById('teacherPwInput').value = '';
+            document.getElementById('pwErrorMsg').classList.add('hidden');
+            document.getElementById('teacherAuthModal').classList.remove('hidden');
+            document.getElementById('teacherAuthModal').classList.add('flex');
+            document.getElementById('teacherPwInput').focus();
+        };
+
+        window.closeTeacherAuthModal = () => {
+            document.getElementById('teacherAuthModal').classList.add('hidden');
+            document.getElementById('teacherAuthModal').classList.remove('flex');
+        };
+
+        window.checkTeacherPw = () => {
+            const pw = document.getElementById('teacherPwInput').value;
+            if (pw === '0121') {
+                closeTeacherAuthModal();
+                document.getElementById('teacherModal').classList.remove('hidden');
+                document.getElementById('teacherModal').classList.add('flex');
+            } else {
+                document.getElementById('pwErrorMsg').classList.remove('hidden');
+            }
+        };
+
+        // 엔터키 지원
+        document.getElementById('teacherPwInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') window.checkTeacherPw();
+        });
+
+        window.closeTeacherModal = () => {
+            document.getElementById('teacherModal').classList.add('hidden');
+            document.getElementById('teacherModal').classList.remove('flex');
+        };
+
+        // 리셋 커스텀 모달
+        window.openResetConfirm = () => {
+            document.getElementById('resetConfirmModal').classList.remove('hidden');
+            document.getElementById('resetConfirmModal').classList.add('flex');
+        };
+        window.closeResetConfirm = () => {
+            document.getElementById('resetConfirmModal').classList.add('hidden');
+            document.getElementById('resetConfirmModal').classList.remove('flex');
+        };
+
+        window.saveWords = async () => {
+            if(!currentUser) return; // 모달 알림 생략 (조용히 실패 방지)
+            const rows = document.querySelectorAll('.word-row');
+            const newWords = [];
+            rows.forEach(row => {
+                const ko = row.querySelector('.ko-input').value.trim();
+                const en = row.querySelector('.en-input').value.trim();
+                if(ko && en) newWords.push({ko, en});
+            });
+            if(newWords.length === 0) return; // 빈칸 불가
+
+            try {
+                const wordsRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'wordConfig');
+                await setDoc(wordsRef, { list: newWords });
+                // HTML로 간이 알림창 (toast) 구현 가능하나, 심플하게 텍스트 버튼 변경으로 피드백
+                const btn = event.target;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✅ 저장 완료!';
+                btn.classList.add('bg-green-500');
+                setTimeout(() => { 
+                    btn.innerHTML = originalText; 
+                    btn.classList.remove('bg-green-500');
+                }, 2000);
+            } catch(e) { console.error(e); }
+        };
+
+        window.executeResetLeaderboard = async () => {
+            if(!currentUser) return;
+            try {
+                const lbRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
+                const snap = await getDocs(lbRef);
+                const deletePromises = [];
+                snap.forEach(docSnap => { deletePromises.push(deleteDoc(docSnap.ref)); });
+                await Promise.all(deletePromises);
+                closeResetConfirm();
+            } catch(e) { console.error(e); }
+        };
+
+        /* -------------------------------------------
+           게임 메인 로직 (3. 두더지 글씨 생성 방식 변경)
+           ------------------------------------------- */
+        window.joinGame = () => {
+            const g = document.getElementById('inputGrade').value.trim();
+            const c = document.getElementById('inputClass').value.trim();
+            const n = document.getElementById('inputNum').value.trim();
+            const name = document.getElementById('inputName').value.trim();
+
+            if(!g || !c || !n || !name) {
+                // UI 힌트 (빨간테두리) 부여 등으로 alert 대체 가능하지만 단순 조건문 처리
+                return; 
+            }
+
+            studentInfoString = `${g}학년 ${c}반 ${n}번 ${name}`;
+            document.getElementById('loginOverlay').style.display = 'none';
+        };
+
+        function initBoard() {
+            boardEl.innerHTML = '';
+            for (let i = 0; i < GRID_SIZE; i++) {
+                const hole = document.createElement('div');
+                hole.className = 'hole-container';
+                
+                const mole = document.createElement('div');
+                mole.className = 'mole';
+                mole.id = `mole-${i}`;
+                
+                // 두더지 이모지 크기 축소, 글자 들어갈 공간 확보
+                mole.innerHTML = `
+                    <div class="text-[2.5rem] md:text-[3rem] leading-none mb-1">🐹</div>
+                    <div class="mole-text en-font en-text flex items-center justify-center h-full pb-2"></div>
+                `;
+                
+                mole.addEventListener('mousedown', (e) => handleWhack(i, e));
+                mole.addEventListener('touchstart', (e) => handleWhack(i, e));
+
+                const grass = document.createElement('div');
+                grass.className = 'grass';
+
+                hole.appendChild(mole);
+                hole.appendChild(grass);
+                boardEl.appendChild(hole);
+            }
+        }
+
+        function setNextQuestion() {
+            if(globalWordList.length === 0) return;
+            const randomIndex = Math.floor(Math.random() * globalWordList.length);
+            currentTargetWord = globalWordList[randomIndex];
+            questionEl.textContent = currentTargetWord.ko;
+        }
+
+        function speakWord(text) {
+            if (synth.speaking) synth.cancel();
+            const utterThis = new SpeechSynthesisUtterance(text);
+            utterThis.lang = 'en-US';
+            utterThis.rate = 1.0;
+            synth.speak(utterThis);
+        }
+
+        function handleWhack(holeIndex, event) {
+            event.preventDefault();
+            if (!isPlaying || !activeMoles[holeIndex]) return;
+
+            const moleEl = document.getElementById(`mole-${holeIndex}`);
+            const clickedWordObj = activeMoles[holeIndex].wordObj;
+            const hideTimerId = activeMoles[holeIndex].hideTimerId;
+
+            if (clickedWordObj.en === currentTargetWord.en) {
+                speakWord(clickedWordObj.en);
+                combo++;
+                if(combo > maxCombo) maxCombo = combo;
+                
+                let points = 10;
+                if (combo >= 3) points += 15;
+                score += points;
+                
+                moleEl.classList.add('hit-correct');
+                setTimeout(() => moleEl.classList.remove('hit-correct'), 200);
+                setNextQuestion();
+            } else {
+                combo = 0;
+                score = Math.max(0, score - 5);
+                moleEl.classList.add('hit-wrong');
+                setTimeout(() => moleEl.classList.remove('hit-wrong'), 200);
+            }
+
+            updateDisplays();
+            clearTimeout(hideTimerId);
+            hideMole(holeIndex);
+        }
+
+        function updateDisplays() {
+            scoreEl.textContent = score;
+            comboEl.textContent = `${combo}연속`;
+            if(combo >= 3) {
+                comboEl.innerHTML = `${combo}연속 <span class="animate-bounce inline-block">🔥</span>`;
+                comboEl.classList.add('text-red-600', 'scale-110');
+            } else {
+                comboEl.classList.remove('text-red-600', 'scale-110');
+            }
+            timeEl.textContent = timeLeft;
+        }
+
+        function spawnMole() {
+            if (!isPlaying || globalWordList.length === 0) return;
+
+            const emptyHoles = activeMoles.map((val, idx) => val === null ? idx : null).filter(val => val !== null);
+            if (emptyHoles.length === 0) return;
+
+            const randomHole = emptyHoles[Math.floor(Math.random() * emptyHoles.length)];
+            
+            let wordToSpawn;
+            if (Math.random() < 0.4 && currentTargetWord) {
+                wordToSpawn = currentTargetWord;
+            } else {
+                wordToSpawn = globalWordList[Math.floor(Math.random() * globalWordList.length)];
+            }
+
+            const moleEl = document.getElementById(`mole-${randomHole}`);
+            moleEl.querySelector('.en-text').textContent = wordToSpawn.en;
+            moleEl.classList.add('up');
+
+            const showTime = 600 + ((timeLeft / GAME_DURATION) * 1200);
+            const hideTimerId = setTimeout(() => { hideMole(randomHole); }, showTime);
+
+            activeMoles[randomHole] = { wordObj: wordToSpawn, hideTimerId: hideTimerId };
+        }
+        
+        function spawnMoleLoop() {
+            if(!isPlaying) return;
+            spawnMole();
+            const nextSpawnDelay = 400 + ((timeLeft / GAME_DURATION) * 1000);
+            moleTimer = setTimeout(spawnMoleLoop, nextSpawnDelay);
+        }
+
+        function hideMole(holeIndex) {
+            const moleEl = document.getElementById(`mole-${holeIndex}`);
+            if(moleEl) moleEl.classList.remove('up');
+            activeMoles[holeIndex] = null;
+        }
+
+        window.startGame = () => {
+            if(!studentInfoString) {
+                document.getElementById('loginOverlay').style.display = 'flex';
+                return;
+            }
+
+            score = 0;
+            combo = 0;
+            maxCombo = 0;
+            timeLeft = GAME_DURATION;
+            isPlaying = true;
+            activeMoles.fill(null);
+            
+            startBtn.disabled = true;
+            startBtn.textContent = '진행 중...';
+
+            for(let i=0; i<GRID_SIZE; i++) hideMole(i);
+
+            updateDisplays();
+            setNextQuestion();
+
+            gameInterval = setInterval(() => {
+                timeLeft--;
+                updateDisplays();
+                if (timeLeft <= 0) endGame();
+            }, 1000);
+
+            spawnMoleLoop();
+        };
+
+        async function endGame() {
+            isPlaying = false;
+            clearInterval(gameInterval);
+            clearTimeout(moleTimer);
+            
+            for(let i=0; i<GRID_SIZE; i++) hideMole(i);
+            questionEl.textContent = "종료!";
+            
+            document.getElementById('finalScoreDisplay').textContent = score;
+            document.getElementById('finalComboDisplay').textContent = `${maxCombo}연속`;
+            document.getElementById('gameOverModal').classList.remove('hidden');
+            document.getElementById('gameOverModal').classList.add('flex');
+
+            if (score > 0 && currentUser) {
+                try {
+                    const lbRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
+                    await addDoc(lbRef, {
+                        name: studentInfoString,
+                        score: score,
+                        timestamp: Date.now()
+                    });
+                } catch(e) {}
+            }
+        }
+
+        window.closeModalAndReset = () => {
+            document.getElementById('gameOverModal').classList.add('hidden');
+            document.getElementById('gameOverModal').classList.remove('flex');
+            
+            startBtn.disabled = false;
+            startBtn.textContent = '게임 시작';
+            questionEl.textContent = "준비";
+            
+            score = 0;
+            combo = 0;
+            timeLeft = GAME_DURATION;
+            updateDisplays();
+        };
+
+        window.onload = () => {
+            initBoard();
+            initAuth();
+        };
+
+    </script>
+</body>
+</html>
