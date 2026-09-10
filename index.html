@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>단어 잡기 두더지 게임</title>
+    <title>단어 두더지 잡기 게임(Wack-A-Word)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -64,18 +64,17 @@
             bottom: -100%;
             left: 10%;
             width: 80%;
-            height: 95%;
+            height: 90%;
             background-color: #8d6e63;
             border-radius: 50px 50px 0 0;
-            transition: bottom 0.12s ease-out; /* 조금 더 찰지게 속도 조절 */
+            transition: bottom 0.12s ease-out;
             cursor: pointer;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
-            padding-top: 5%; /* 여백 줄임 */
+            padding-top: 4%;
             z-index: 5;
-            /* 3. 흰색 불투명 배경/테두리 제거됨 */
         }
 
         .mole.up {
@@ -84,28 +83,30 @@
 
         /* 1. 글씨 크기 조절 및 줄바꿈 허용으로 긴 단어 대응 */
         .mole-text {
-            color: #ffffff; /* 하얀색 텍스트 */
+            color: #ffffff;
             text-shadow: 
-                -2px -2px 0 #000,  
-                 2px -2px 0 #000,
-                -2px  2px 0 #000,
-                 2px  2px 0 #000,
-                 0px  4px 4px rgba(0,0,0,0.6); 
-            font-size: 1.2rem; /* 글자 크기 축소 */
+                -1px -1px 0 #000,  
+                 1px -1px 0 #000,
+                -1px  1px 0 #000,
+                 1px  1px 0 #000,
+                 0px  2px 2px rgba(0,0,0,0.8); 
+            font-size: 1.05rem; /* 글자 크기를 약간 줄임 */
             text-align: center;
-            /* 긴 단어 줄바꿈 허용 및 컨테이너 안에 맞추기 */
             white-space: normal; 
-            word-break: break-word; /* 긴 단어 강제 줄바꿈 */
-            width: 100%;
-            max-width: 90%;
-            margin-top: 2px;
-            line-height: 1.1;
-            padding: 0 2px; /* 양옆 여백 최소화 */
+            word-break: keep-all; /* 단어가 중간에 잘리지 않고 띄어쓰기 기준으로 줄바꿈 되도록 설정 */
+            width: 95%;
+            margin-top: 0;
+            line-height: 1.05;
+            padding: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1; /* 글씨 영역이 남은 공간을 모두 차지하도록 설정 */
         }
 
         /* 미디어 쿼리: 모바일 등 작은 화면에서 글자 크기 더 축소 */
         @media (max-width: 768px) {
-            .mole-text { font-size: 1rem; }
+            .mole-text { font-size: 0.95rem; }
             .mole { padding-top: 2%; }
         }
 
@@ -125,7 +126,7 @@
     <!-- 상단 헤더 -->
     <header class="w-full max-w-7xl mx-auto flex justify-between items-center mb-2 px-2 z-10 relative">
         <h1 class="text-3xl text-white font-bold text-shadow-md drop-shadow-md flex items-center gap-2">
-            <span>🐹</span> 학용품 잡기
+            <span>🐹</span> Wack-A-Word
         </h1>
         <button onclick="openTeacherAuthModal()" class="text-sm bg-white/80 hover:bg-white text-gray-700 px-4 py-2 rounded-full shadow-sm border border-gray-200 transition-colors font-bold">
             👨‍🏫 선생님
@@ -202,10 +203,17 @@
 
     <!-- 1. 학생 정보 입력 (홈 화면) -->
     <div id="loginOverlay" class="fixed inset-0 bg-green-50/90 backdrop-blur-md flex items-center justify-center z-[60] p-4">
-        <div class="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl border-4 border-green-300">
-            <div class="text-6xl mb-2 animate-bounce">🐹</div>
-            <h2 class="text-3xl text-gray-800 mb-1 font-bold">단어 잡기 두더지</h2>
-            <p class="text-gray-500 mb-6 text-sm">정보를 입력하고 시작하세요!</p>
+        <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full text-center shadow-2xl border-4 border-green-300 relative">
+            
+            <!-- 홈 화면용 교사 LMS 접속 버튼 추가 -->
+            <button onclick="openTeacherAuthModal()" class="absolute top-4 right-4 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded-full font-bold transition-colors shadow-sm border border-gray-200 z-10">
+                👨‍🏫 선생님
+            </button>
+
+            <div class="text-6xl mb-2 animate-bounce mt-2">🐹</div>
+            <h2 class="text-3xl text-gray-800 mb-1 font-bold">Wack-A-Word
+            </h2>
+            <p class="text-gray-500 mb-6 text-sm">단어 두더지를 잡아 보세요!</p>
             
             <div class="grid grid-cols-2 gap-3 mb-6 text-left">
                 <div>
@@ -221,7 +229,7 @@
                     <input type="number" id="inputNum" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 focus:border-green-400 outline-none" placeholder="예: 15">
                 </div>
                 <div>
-                    <label class="block text-gray-700 text-sm mb-1 font-bold">이름</label>
+                    <label class="block text-gray-700 text-sm mb-1 font-bold">닉네임</label>
                     <input type="text" id="inputName" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 focus:border-green-400 outline-none" placeholder="홍길동">
                 </div>
             </div>
@@ -323,26 +331,11 @@
 
 
     <!-- ============================================== -->
-    <!-- 게임 로직 및 Firebase 연동 -->
+    <!-- 게임 로직 -->
     <!-- ============================================== -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Firebase 설정 (기존과 동일)
-        let firebaseConfig = {};
-        try { if (typeof __firebase_config !== 'undefined') firebaseConfig = JSON.parse(__firebase_config); } catch(e) {}
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        let currentUser = null;
-        let unsubscribeWords = null;
-        let unsubscribeLeaderboard = null;
+    <script>
+        // 로컬 데이터 저장용 (API 제거로 인해 메모리에서만 동작합니다)
+        let localLeaderboardData = [];
 
         let globalWordList = [
             { ko: "연필", en: "pencil" },
@@ -379,36 +372,6 @@
         const startBtn = document.getElementById('startBtn');
         
         const synth = window.speechSynthesis;
-
-        // Firebase 인증 (기존과 동일)
-        const initAuth = async () => {
-            try {
-                if (initialAuthToken) await signInWithCustomToken(auth, initialAuthToken);
-                else await signInAnonymously(auth);
-            } catch (err) { console.error(err); }
-        };
-
-        onAuthStateChanged(auth, (user) => {
-            if(user) { currentUser = user; setupRealtimeListeners(); }
-        });
-
-        function setupRealtimeListeners() {
-            if(!currentUser) return;
-            const wordsRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'wordConfig');
-            unsubscribeWords = onSnapshot(wordsRef, (docSnap) => {
-                if(docSnap.exists()) globalWordList = docSnap.data().list;
-                else setDoc(wordsRef, { list: globalWordList }).catch(e=>{});
-                renderTeacherWords();
-            });
-
-            const lbRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
-            unsubscribeLeaderboard = onSnapshot(lbRef, (snapshot) => {
-                const lbData = [];
-                snapshot.forEach(doc => { lbData.push({ id: doc.id, ...doc.data() }); });
-                lbData.sort((a, b) => b.score - a.score || a.timestamp - b.timestamp);
-                renderLeaderboard(lbData);
-            });
-        }
 
         /* -------------------------------------------
            UI 렌더링 (리더보드 디자인 압축)
@@ -510,7 +473,6 @@
         };
 
         window.saveWords = async () => {
-            if(!currentUser) return; // 모달 알림 생략 (조용히 실패 방지)
             const rows = document.querySelectorAll('.word-row');
             const newWords = [];
             rows.forEach(row => {
@@ -520,31 +482,24 @@
             });
             if(newWords.length === 0) return; // 빈칸 불가
 
-            try {
-                const wordsRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'wordConfig');
-                await setDoc(wordsRef, { list: newWords });
-                // HTML로 간이 알림창 (toast) 구현 가능하나, 심플하게 텍스트 버튼 변경으로 피드백
-                const btn = event.target;
-                const originalText = btn.innerHTML;
-                btn.innerHTML = '✅ 저장 완료!';
-                btn.classList.add('bg-green-500');
-                setTimeout(() => { 
-                    btn.innerHTML = originalText; 
-                    btn.classList.remove('bg-green-500');
-                }, 2000);
-            } catch(e) { console.error(e); }
+            // API 대신 로컬 변수에 덮어쓰기
+            globalWordList = newWords;
+            renderTeacherWords(); // 화면 즉시 업데이트
+
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '✅ 저장 완료!';
+            btn.classList.add('bg-green-500');
+            setTimeout(() => { 
+                btn.innerHTML = originalText; 
+                btn.classList.remove('bg-green-500');
+            }, 2000);
         };
 
         window.executeResetLeaderboard = async () => {
-            if(!currentUser) return;
-            try {
-                const lbRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
-                const snap = await getDocs(lbRef);
-                const deletePromises = [];
-                snap.forEach(docSnap => { deletePromises.push(deleteDoc(docSnap.ref)); });
-                await Promise.all(deletePromises);
-                closeResetConfirm();
-            } catch(e) { console.error(e); }
+            localLeaderboardData = [];
+            renderLeaderboard(localLeaderboardData);
+            closeResetConfirm();
         };
 
         /* -------------------------------------------
@@ -575,10 +530,10 @@
                 mole.className = 'mole';
                 mole.id = `mole-${i}`;
                 
-                // 두더지 이모지 크기 축소, 글자 들어갈 공간 확보
+                // 두더지 이모지 크기를 줄이고, 글자 영역을 flex로 넓게 할당
                 mole.innerHTML = `
-                    <div class="text-[2.5rem] md:text-[3rem] leading-none mb-1">🐹</div>
-                    <div class="mole-text en-font en-text flex items-center justify-center h-full pb-2"></div>
+                    <div class="text-3xl md:text-4xl leading-none mt-1">🐹</div>
+                    <div class="mole-text en-font en-text pb-1 md:pb-2"></div>
                 `;
                 
                 mole.addEventListener('mousedown', (e) => handleWhack(i, e));
@@ -733,15 +688,15 @@
             document.getElementById('gameOverModal').classList.remove('hidden');
             document.getElementById('gameOverModal').classList.add('flex');
 
-            if (score > 0 && currentUser) {
-                try {
-                    const lbRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
-                    await addDoc(lbRef, {
-                        name: studentInfoString,
-                        score: score,
-                        timestamp: Date.now()
-                    });
-                } catch(e) {}
+            if (score > 0) {
+                // API 대신 로컬 배열에 데이터 푸시 및 정렬
+                localLeaderboardData.push({
+                    name: studentInfoString,
+                    score: score,
+                    timestamp: Date.now()
+                });
+                localLeaderboardData.sort((a, b) => b.score - a.score || a.timestamp - b.timestamp);
+                renderLeaderboard(localLeaderboardData);
             }
         }
 
@@ -761,7 +716,8 @@
 
         window.onload = () => {
             initBoard();
-            initAuth();
+            renderTeacherWords();
+            renderLeaderboard(localLeaderboardData);
         };
 
     </script>
